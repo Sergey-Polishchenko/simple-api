@@ -1,0 +1,39 @@
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: ./deployments/Dockerfile
+    ports:
+      - "80:${PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../.env:/app/.env
+    networks:
+      - app_network
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge

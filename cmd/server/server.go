@@ -34,7 +34,12 @@ func main() {
 		logger.Error("can't connect to postgres database", "error", err)
 		return
 	}
-	repo := repo.NewUserRepo(db)
+
+	repo, err := repo.NewUserRepo(db)
+	if err != nil {
+		logger.Error("can't automigrate postgres database", "error", err)
+		return
+	}
 
 	app := app.NewUserApp(repo, logger)
 	router := http.NewRouter(app)

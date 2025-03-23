@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+env:
+  GO_VERSION: "1.23.4"
+  GOMODCACHE: "${{ github.workspace }}/go/pkg/mod"
+
+jobs:
+  test_and_lint:
+    name: Tests & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Cache Go Build Artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/bin
+            ${{ env.GOMODCACHE }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Install Dependencies
+        run: go mod tidy -v
+
+      - name: Run Linter
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run -v --timeout 5m ./cmd/... ./internal/...
+
+      - name: Run Tests with Coverage
+        run: |
+          go test -v -race -mod=readonly \
+          -coverprofile=coverage.out \
+          -covermode=atomic \
+          ./cmd/... \
+          ./internal/...
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        if: github.event_name == 'push'
+        with:
+          files: coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          verbose: true
+          
+  build:
+    name: Build Binary
+    runs-on: ubuntu-latest
+    needs: test_and_lint
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build Application
+        run: go build -v -o myapp ./cmd/server

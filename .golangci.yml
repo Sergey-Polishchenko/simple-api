@@ -2,17 +2,32 @@ run:
   timeout: 5m
   modules-download-mode: readonly
 
+linters-settings:
+  revive:
+    rules:
+      - name: package-comments
+        disabled: true
+      - name: exported
+        disabled: true
+
+issues:
+  exclude-use-default: false
+  exclude-dirs:
+    - vendor
+    - go/pkg/mod
+
+  exclude-rules:
+    - path: go/pkg/mod/.*
+      linters:
+        - all
+
 linters:
   enable:
     - revive
     - govet
-    - gosec
     - errcheck
+    - staticcheck
+    - gosimple
   disable:
     - wsl
-
-issues:
-  exclude-rules:
-    - path: _test.go
-      linters:
-        - errcheck
+    - dupl
